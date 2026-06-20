@@ -120,6 +120,7 @@ type ChatCompletionRequest struct {
 	ReasoningEffort  *string         `json:"reasoning_effort,omitempty"`
 	Logprobs         *bool           `json:"logprobs"`
 	TopLogprobs      int             `json:"top_logprobs"`
+	NumCtx           *int            `json:"num_ctx,omitempty"`
 	DebugRenderOnly  bool            `json:"_debug_render_only"`
 }
 
@@ -159,6 +160,7 @@ type CompletionRequest struct {
 	TopP             float32        `json:"top_p"`
 	Suffix           string         `json:"suffix"`
 	Logprobs         *int           `json:"logprobs"`
+	NumCtx           *int           `json:"num_ctx,omitempty"`
 	DebugRenderOnly  bool           `json:"_debug_render_only"`
 }
 
@@ -681,6 +683,10 @@ func FromChatRequest(r ChatCompletionRequest) (*api.ChatRequest, error) {
 		options["top_p"] = 1.0
 	}
 
+	if r.NumCtx != nil {
+		options["num_ctx"] = *r.NumCtx
+	}
+
 	var format json.RawMessage
 	if r.ResponseFormat != nil {
 		switch strings.ToLower(strings.TrimSpace(r.ResponseFormat.Type)) {
@@ -824,6 +830,10 @@ func FromCompleteRequest(r CompletionRequest) (api.GenerateRequest, error) {
 		options["top_p"] = r.TopP
 	} else {
 		options["top_p"] = 1.0
+	}
+
+	if r.NumCtx != nil {
+		options["num_ctx"] = *r.NumCtx
 	}
 
 	var logprobs bool
