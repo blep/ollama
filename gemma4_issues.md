@@ -40,6 +40,18 @@ Numbers are rendered raw (no delimiters). Integers and floats use Go's `%d` / `%
 Range constraints (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`)
 are **not supported** by the Gemma 4 template or renderer.
 
+**Dictionary / map types** (`additionalProperties` in JSON Schema) are **not supported** by the
+Gemma 4 template or renderer. Neither the Jinja2 template nor the Go renderer checks for
+`additionalProperties`. A schema like:
+
+```json
+{"type": "object", "additionalProperties": {"type": "string"}}
+```
+
+would be incorrectly rendered as a named parameter `additionalProperties` rather than as an
+open-key object type. Workaround: define explicit `properties` if the key set is known at
+schema-authoring time.
+
 **Type annotation in tool declarations:** The renderer emits `type:<|"|>STRING<|"|>`,
 `type:<|"|>NUMBER<|"|>`, `type:<|"|>INTEGER<|"|>`, `type:<|"|>BOOLEAN<|"|>`,
 `type:<|"|>OBJECT<|"|>`, `type:<|"|>ARRAY<|"|>` inside property definitions.
