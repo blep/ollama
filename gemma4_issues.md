@@ -26,10 +26,23 @@ Source: https://ai.google.dev/gemma/docs/core/prompt-formatting-gemma4
 ```
 
 Arguments are **NOT JSON** — they use Gemma's native notation:
-- Strings: `key:<|"|>value<|"|>`
-- Objects: `key:{nested:value}`
-- Arrays: `[item1,item2]`
-- Booleans: `true`/`false`
+
+| JSON Schema type | Gemma 4 format | Example |
+|---|---|---|
+| string | `key:<\|"\|>value<\|"\|>` | `name:<\|"\|>Paris<\|"\|>` |
+| number (integer) | `key:<value>` | `count:42` |
+| number (float) | `key:<value>` | `price:3.14` |
+| boolean | `key:true` / `key:false` | `active:true` |
+| object | `key:{nested:value}` | `address:{city:<\|"\|>Paris<\|"\|>}` |
+| array | `[item1,item2]` | `[<\|"\|>a<\|"\|>,<\|"\|>b<\|"\|>]` |
+
+Numbers are rendered raw (no delimiters). Integers and floats use Go's `%d` / `%v` formatting.
+Range constraints (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`)
+are **not supported** by the Gemma 4 template or renderer.
+
+**Type annotation in tool declarations:** The renderer emits `type:<|"|>STRING<|"|>`,
+`type:<|"|>NUMBER<|"|>`, `type:<|"|>INTEGER<|"|>`, `type:<|"|>BOOLEAN<|"|>`,
+`type:<|"|>OBJECT<|"|>`, `type:<|"|>ARRAY<|"|>` inside property definitions.
 
 ### Key constraint (from emansom / community analysis)
 
