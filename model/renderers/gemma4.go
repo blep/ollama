@@ -225,7 +225,9 @@ func (r *Gemma4Renderer) renderToolDeclaration(tool api.Tool) string {
 
 		if fn.Parameters.Properties != nil && fn.Parameters.Properties.Len() > 0 {
 			sb.WriteString("properties:{")
-			r.writeTypedProperties(&sb, fn.Parameters.Properties)
+			props := typedSchemaPropertiesMap(fn.Parameters.Properties)
+			r.resolveDefs(props, fn.Parameters.Defs)
+			r.writeSchemaProperties(&sb, props)
 			sb.WriteString("}")
 			needsComma = true
 		}
@@ -826,4 +828,64 @@ func (r *Gemma4Renderer) formatArrayValue(arr []any) string {
 	}
 	sb.WriteString("]")
 	return sb.String()
+}
+
+// resolveRefs walks a schema node and resolves $ref references against the
+// given $defs map.  Returns the resolved node (may be the same map if no refs).
+func (r *Gemma4Renderer) resolveRefs(node map[string]any, defs map[string]any) map[string]any {
+	if node == nil {
+		return node
+	}
+
+	// Resolve $ref: "#/$defs/Name" → lookup Name in defs
+	if ref, ok := node["$ref"].(string); ok && ref != "" {
+		// Extract the def name: "#/$defs/Idea" → "Idea"
+		defName := ref
+		if idx := strings.LastIndex(ref, "/"); idx >= 0 {
+			defName = ref[idx+1:]
+		}
+		if resolved, ok := defs[defName]; ok {
+			if resolvedMap, ok := resolved.(map[string]any); ok {
+				// Recursively resolve any refs in the resolved def
+				return r.resolveRefs(resolvedMap, defs)
+			}
+		}
+	}
+
+	// Recursively resolve in "items" (array item schemas)
+	if items, ok := node["items"].(map[string]any); ok {
+		node["items"] = r.resolveRefs(items, defs)
+	}
+
+	// Recursively resolve in "properties" (object property schemas)
+	if props, ok := node["properties"].(map[string]any); ok {
+		resolved := make(map[string]any, len(props))
+		for k, v := range props {
+			if vm, ok := v.(map[string]any); ok {
+				resolved[k] = r.resolveRefs(vm, defs)
+			} else {
+				resolved[k] = v
+			}
+		}
+		node["properties"] = resolved
+	}
+
+	return node
+}
+
+// resolveDefs parses the $defs from tool parameters and resolves all $ref
+// references in the top-level properties.  Modifies properties in place.
+func (r *Gemma4Renderer) resolveDefs(props map[string]any, defs any) {
+	if defs == nil {
+		return
+	}
+	defMap, ok := defs.(map[string]any)
+	if !ok {
+		return
+	}
+	for name, prop := range props {
+		if pm, ok := prop.(map[string]any); ok {
+			props[name] = r.resolveRefs(pm, defMap)
+		}
+	}
 }
